@@ -78,6 +78,7 @@ namespace ComHash
         }
         void Compute(string dir, string ext)
         {
+            if (!Directory.Exists(dir)) return;
             foreach (string filepath in Directory.GetFiles(dir))
             {
                 if (Path.GetExtension(filepath).ToLower().Equals(ext))

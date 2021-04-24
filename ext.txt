@@ -2,3 +2,4 @@
 ./testdir/d1	.exe
 ./testdir/d1	.txt
 ./testdir/d1/d2/d3	.bk
+./testdir/d1/d2/d4	.bk
