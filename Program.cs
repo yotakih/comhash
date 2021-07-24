@@ -1,23 +1,24 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
-using System.Security.Cryptography;
 
 namespace ComHash
 {
     class Program
     {
         const string DLM = "\t";
-        MD5 Md5 = MD5.Create();
+        Dictionary<string, string> DicContext = new Dictionary<string, string>();
+        string RootDir = "";
         string TargetListFilePath = "";
         string OutputFilePath = "";
         StreamWriter SwOutput = null;
         static void Main(string[] args)
         {
             Console.WriteLine($"Compute Hash Start!! {DateTime.Now}");
-            new Program().Proc(args);
+            new Program().Proc(args, ComHashClass.ComHashFunc);
             Console.WriteLine($"Compute Hash End!! {DateTime.Now}");
         }
-        void Proc(string[] args)
+        void Proc(string[] args, Func<string, Dictionary<string, string>, string> func)
         {
             try
             {
@@ -31,7 +32,25 @@ namespace ComHash
                     {
                         string[] splt = ln.Split(DLM);
                         if (splt.Length == 2){
-                            this.Compute(splt[0], splt[1]);
+                            var interdir = splt[0];
+                            var fulldir = Path.Join(this.RootDir, interdir);
+                            Console.WriteLine(fulldir);
+                            var ext = splt[1];
+                            if (!Directory.Exists(fulldir)) return;
+                            foreach (string filepath in Directory.GetFiles(fulldir))
+                            {
+                                if (Path.GetExtension(filepath).ToLower().Equals(ext))
+                                {
+                                    this.SwOutput.WriteLine(
+                                        String.Format(
+                                            "{1}{0}{2}{0}{3}",
+                                             DLM,
+                                             filepath.Substring(this.RootDir.Length),
+                                             filepath,
+                                             func(filepath, this.DicContext)
+                                        ));
+                                }
+                            }
                         }
                         ln = sr.ReadLine();
                     }
@@ -43,58 +62,50 @@ namespace ComHash
             }
             finally
             {
-                this.Md5.Dispose();
                 if (!(this.SwOutput is null))
                     this.SwOutput.Close();
             }
         }
         bool AnalizeArgs(string[] args)
         {
+            bool ret = true;
             switch (args.Length)
             {
                 case 0:
-                    Usage();
-                    return false;
                 case 1:
-                    this.TargetListFilePath = args[0];
-                    this.OutputFilePath = "comhash.txt";
-                    return true;
+                    Usage();
+                    ret = false;
+                    break;
                 case 2:
-                    this.TargetListFilePath = args[0];
-                    this.OutputFilePath = args[1];
-                    return true;
+                    this.RootDir = args[0];
+                    this.TargetListFilePath = args[1];
+                    this.OutputFilePath = "comhash.txt";
+                    ret = true;
+                    break;
+                case 3:
+                    this.RootDir = args[0];
+                    this.TargetListFilePath = args[1];
+                    this.OutputFilePath = args[2];
+                    ret = true;
+                    break;
                 default:
                     Usage();
-                    return false;
+                    ret = false;
+                    break;
             }
+            this.DicContext["RootDir"] = this.RootDir;
+            this.DicContext["TargetListFilePath"] = this.TargetListFilePath;
+            this.DicContext["OutputFilePath"] = this.OutputFilePath;
+            return ret;
         }
         void Usage()
         {
             Console.WriteLine(
                 $"Usage:\n" +
-                $" arg1: target extension list file path\n" +
-                $" arg2: output file path"
+                $" arg1: select Root Dir\n" +
+                $" arg2: target extension list file path\n" +
+                $" arg3: output file path"
             );
-        }
-        void Compute(string dir, string ext)
-        {
-            if (!Directory.Exists(dir)) return;
-            foreach (string filepath in Directory.GetFiles(dir))
-            {
-                if (Path.GetExtension(filepath).ToLower().Equals(ext))
-                {
-                    using (var fs = new FileStream(filepath, FileMode.Open, FileAccess.Read))
-                    {
-                        this.SwOutput.WriteLine(
-                            String.Format(
-                                "{1}{0}{2}",
-                                 DLM,
-                                 filepath,
-                                 BitConverter.ToString(this.Md5.ComputeHash(fs)).Replace("-","")
-                            ));
-                    }
-                }
-            }
         }
     }
 }
